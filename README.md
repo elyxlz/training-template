@@ -17,6 +17,15 @@ pip install -e '.[train]'
 pip install .
 ```
 
+## Structure
+```
+├── package_name
+│   ├── config.py # model config
+│   ├── data.py # data processing logic
+│   ├── model.py # model definition
+│   └── trainer.py # trainer class and train config
+```
+
 ## Usage
 ```py
 from package_name import (
