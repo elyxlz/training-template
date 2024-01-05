@@ -17,7 +17,7 @@ from .data import DemoDataset
 @dataclass
 class TrainConfig:
     # main
-    name: str = "neural-tokenizer_test"
+    name: str = "demo-test"
     mixed_precision: str = "no"  # "no", "fp16", "bf16"
     gradient_checkpointing: bool = False
     cpu: bool = False
@@ -47,7 +47,7 @@ class TrainConfig:
     val_every: int = None
     resume_from_ckpt: str = None
     use_wandb: bool = False
-    wandb_project_name: str = "neural-tokenizer"
+    wandb_project_name: str = "demomodel"
 
     def to_dict(self):
         return vars(self)
