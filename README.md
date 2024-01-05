@@ -28,9 +28,7 @@ pip install .
 
 ## Usage (inference)
 ```py
-from package_name import (
-    DemoModel,
-)
+from package_name import DemoModel
 
 # load pretrained checkpoint
 model = DemoModel.from_pretrained(xxx)
