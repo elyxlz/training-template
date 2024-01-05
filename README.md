@@ -26,26 +26,43 @@ pip install .
 │   └── trainer.py # trainer class and train config
 ```
 
-## Usage
+## Usage (inference)
+```py
+from package_name import (
+    DemoModel,
+)
+
+# load pretrained checkpoint
+model = DemoModel.from_pretrained(xxx)
+```
+
+## Usage (training)
+
+Define a config file in `configs/`, called `demo_run` in this case:
 ```py
 from package_name import (
     DemoModel,
     DemoModelConfig,
-    Trainer,
-    TrainConfig,
     DemoDataset,
+    Trainer,
+    TrainConfig
 )
 
 model = DemoModel(DemoModelConfig(xxx))
-
-# push, and load models to/from HF Hub
-model.push_to_hub(xxx)
-model = DemoModel.from_pretrained(xxx)
-
-# train
 dataset = DemoDataset(xxx)
-trainer = Trainer(model, dataset, TrainConfig(xxx))
-trainer.train()
+
+trainer = Trainer(
+    model=model,
+    dataset=dataset,    
+    train_config=TrainConfig(xxx)
+)
+```
+Create an accelerate config.
+```sh
+accelerate config
 ```
 
-You can optionally add more files outside the package, e.g. a 'train.py' entrypoint, 'configs/' dir to store .py training/model runs, etc...
+And then run the training.
+```sh
+accelerate launch train.py demo_run
+```
