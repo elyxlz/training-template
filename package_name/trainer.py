@@ -312,7 +312,7 @@ class Trainer:
                 unwrapped_model: DemoModel = self.accelerator.unwrap_model(model)
 
                 unwrapped_model.push_to_hub(
-                    self.train_config.hub_namespace,
+                    self.train_config.name,
                     commit_message=f"Run {self.run_id}, step {self.completed_steps}",
                     private=True,
                     token=os.environ["HUGGINGFACE_TOKEN"],
