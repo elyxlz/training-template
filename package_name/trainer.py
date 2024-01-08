@@ -171,7 +171,7 @@ class Trainer:
     def training_step(self, batch):
         loss = self.model.forward(**batch)
         self.accelerator.backward(loss)
-        self.accelerator.clip_grad_norm_(
+        grad_norm = self.accelerator.clip_grad_norm_(
             self.model.parameters(), self.train_config.grad_norm
         )  # Gradient clipping
         self.optimizer.step()
@@ -180,6 +180,13 @@ class Trainer:
         if self.time_to_log():
             self.accelerator.log({"train_loss": loss}, step=self.completed_steps)
             self.epoch_bar.set_postfix({"loss": loss.item()})
+            self.accelerator.log(
+                {"lr": self.scheduler.get_last_lr()[0]}, step=self.completed_steps
+            )
+            self.accelerator.log(
+                {"grad_norm": grad_norm}, step=self.completed_steps
+            )
+
 
     @torch.no_grad()
     def validation(self, val_loader):
