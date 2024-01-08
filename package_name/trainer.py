@@ -80,6 +80,7 @@ class Trainer:
         self.accelerator = Accelerator(
             mixed_precision=train_config.mixed_precision,
             cpu=train_config.cpu,
+            log_with="wandb" if train_config.use_wandb else None,
         )
 
         # wandb
