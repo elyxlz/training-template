@@ -43,9 +43,9 @@ class TrainConfig:
     # logging and checkpointing
     log_every: int = 100
     save_every: int = 1000
-    push_every: int = None
-    val_every: int = None
-    resume_from_ckpt: str = None
+    push_every: int | None = None
+    val_every: int | None = None
+    resume_from_ckpt: str | None = None
     use_wandb: bool = False
     wandb_project_name: str = "demomodel"
 
