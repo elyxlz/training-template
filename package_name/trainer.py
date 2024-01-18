@@ -73,8 +73,8 @@ class Trainer:
             )
 
         # log dir
-        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+        root_dir = os.getcwd()
+        
         self.log_dir = os.path.join(os.path.join(root_dir, "logs"), self.run_id)
 
         self.accelerator = Accelerator(
