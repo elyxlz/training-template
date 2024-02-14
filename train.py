@@ -1,6 +1,15 @@
 import argparse
 import os
 import importlib
+from accelerate.utils import set_seed
+
+import dotenv
+
+dotenv.load_dotenv()
+
+global_seed = int(os.getenv("GLOBAL_SEED", 42))
+print(f"Setting global seed to {global_seed}")
+set_seed(global_seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("exp_name", help="path to experiment file")

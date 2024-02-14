@@ -19,11 +19,16 @@ class TrainConfig:
     # main
     name: str = "demo-test"
     mixed_precision: str = "no"  # "no", "fp16", "bf16"
-    gradient_checkpointing: bool = False
     cpu: bool = False
+
+    # speed
+    gradient_checkpointing: bool = False
+    torch_compile: bool = False
+    backend_flags: bool = False
 
     # dataset
     batch_size: int = 2
+    gradient_accumulation: int = 1
     num_workers: int = 4
     pin_memory: bool = True
     val_size: int = 128
@@ -38,14 +43,15 @@ class TrainConfig:
 
     # scheduler
     warmup_steps: int = 1000
-    timescale: int = 1e8
+    timescale: int = 500
     last_epoch: int = -1
 
     # logging and checkpointing
     log_every: int = 100
-    save_every: int = 1000
-    push_every: int | None = None
     val_every: int | None = None
+    save_every: int | None = None
+    push_every: int | None = None
+    watch_every: int | None = None
     resume_from_ckpt: str | None = None
     use_wandb: bool = False
     wandb_project_name: str = "demomodel"
@@ -62,6 +68,7 @@ class Trainer:
         train_config: TrainConfig,
     ):
         self.train_config = train_config
+        self.model_config = model.config
 
         self.completed_steps = -1
         self.run_id = wandb.util.generate_id()
@@ -81,12 +88,16 @@ class Trainer:
             mixed_precision=train_config.mixed_precision,
             cpu=train_config.cpu,
             log_with="wandb" if train_config.use_wandb else None,
+            dynamo_backend="inductor" if train_config.torch_compile else None,
+            gradient_accumulation_steps=train_config.gradient_accumulation,
         )
+        if train_config.torch_compile:
+            torch._dynamo.config.optimize_ddp = False
 
         # wandb
         if train_config.use_wandb and self.accelerator.is_local_main_process:
-            config = train_config.to_dict() | model.config.to_dict()
-            config["seed"] = os.getenv("GLOBAL_SEED")
+            config = dict(train_config=train_config.to_dict(), model_config=model.config.to_dict())
+            config['train_config']['seed'] = os.getenv('GLOBAL_SEED', 42)
             assert (
                 train_config.wandb_project_name is not None
             ), "Please provide a wandb project name"
@@ -101,6 +112,22 @@ class Trainer:
                         resume="allow",
                     )
                 ),
+            )
+        else:
+            self.accelerator.log = lambda *args, **kwargs: None
+
+        if train_config.backend_flags:
+            from torch.backends import cudnn, cuda
+
+            cudnn.benchmark = True
+            cudnn.deterministic = False
+            cudnn.allow_tf32 = True
+            cuda.matmul.allow_tf32 = True
+            cuda.matmul.allow_fp16_reduced_precision_reduction = False
+            torch.use_deterministic_algorithms(False)
+            torch.set_float32_matmul_precision("medium")
+            torch._dynamo.config.cache_size_limit = max(
+                128, torch._dynamo.config.cache_size_limit
             )
 
         # model
@@ -163,10 +190,17 @@ class Trainer:
         if train_config.resume_from_ckpt is not None:
             self.resume()
 
+        if self.completed_steps > 0:
+            self.accelerator.skip_first_batches(
+                self.train_loader, self.completed_steps % len(self.train_loader)
+            )
+
         trainable_params = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
         self.accelerator.print("Trainable parameters: ", trainable_params / 1e6, "M")
+        self.accelerator.wait_for_everyone()
+
 
     def training_step(self, batch):
         loss = self.model.forward(**batch)
@@ -228,10 +262,12 @@ class Trainer:
 
                 # checkpoint
                 if self.time_to_save():
+                    self.accelerator.print(f"Saving model to {self.log_dir}")
                     self.save()
 
                 # push to hub
                 if self.time_to_push():
+                    self.accelerator.print("Pushing model to hub...")
                     self.push(self.model)
 
     def time_to_save(self) -> bool:
@@ -271,7 +307,6 @@ class Trainer:
             os.makedirs(self.log_dir)
 
         if self.accelerator.is_local_main_process:
-            self.accelerator.print(f"Saving model to {self.log_dir}")
             save_dir = os.path.join(self.log_dir, f"step_{self.completed_steps}")
             # check if there are < 5 checkpoints
             if len(os.listdir(self.log_dir)) > 5:
@@ -308,7 +343,6 @@ class Trainer:
                 return
 
             if self.accelerator.is_main_process:
-                self.accelerator.print("Pushing model to hub...")
                 unwrapped_model: DemoModel = self.accelerator.unwrap_model(model)
 
                 unwrapped_model.push_to_hub(
