@@ -55,12 +55,7 @@ trainer = Trainer(
     train_config=TrainConfig(xxx)
 )
 ```
-Create an accelerate config.
+Then run the training.
 ```sh
-accelerate config
-```
-
-And then run the training.
-```sh
-accelerate launch train.py demo_run
+python train.py demo_run
 ```
