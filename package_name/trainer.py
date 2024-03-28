@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 import os
 from tqdm import tqdm
 import dotenv
+
 dotenv.load_dotenv()
 
 import torch
@@ -81,7 +82,7 @@ class Trainer:
 
         # log dir
         root_dir = os.getcwd()
-        
+
         self.log_dir = os.path.join(os.path.join(root_dir, "logs"), self.run_id)
 
         self.accelerator = Accelerator(
@@ -96,8 +97,10 @@ class Trainer:
 
         # wandb
         if train_config.use_wandb and self.accelerator.is_local_main_process:
-            config = dict(train_config=train_config.to_dict(), model_config=model.config.to_dict())
-            config['train_config']['seed'] = os.getenv('GLOBAL_SEED', 42)
+            config = dict(
+                train_config=train_config.to_dict(), model_config=model.config.to_dict()
+            )
+            config["train_config"]["seed"] = os.getenv("GLOBAL_SEED", 42)
             assert (
                 train_config.wandb_project_name is not None
             ), "Please provide a wandb project name"
@@ -201,7 +204,6 @@ class Trainer:
         self.accelerator.print("Trainable parameters: ", trainable_params / 1e6, "M")
         self.accelerator.wait_for_everyone()
 
-
     def training_step(self, batch):
         loss = self.model.forward(**batch)
         self.accelerator.backward(loss)
@@ -217,10 +219,7 @@ class Trainer:
             self.accelerator.log(
                 {"lr": self.scheduler.get_last_lr()[0]}, step=self.completed_steps
             )
-            self.accelerator.log(
-                {"grad_norm": grad_norm}, step=self.completed_steps
-            )
-
+            self.accelerator.log({"grad_norm": grad_norm}, step=self.completed_steps)
 
     @torch.no_grad()
     def validation(self, val_loader):

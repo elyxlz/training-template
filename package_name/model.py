@@ -9,8 +9,10 @@ from .config import DemoModelConfig
 
 """ debug """
 
+
 def debug_func(func):
-    """ Decorator to debug a function when error is encountered."""
+    """Decorator to debug a function when error is encountered."""
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -25,6 +27,7 @@ def debug_func(func):
 
 
 """ Build up your model here"""
+
 
 class DemoModel(PreTrainedModel):
     config_class = DemoModelConfig

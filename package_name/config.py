@@ -1,5 +1,6 @@
 from transformers import PretrainedConfig
 
+
 class DemoModelConfig(PretrainedConfig):
     model_type = "demo_model"
 
